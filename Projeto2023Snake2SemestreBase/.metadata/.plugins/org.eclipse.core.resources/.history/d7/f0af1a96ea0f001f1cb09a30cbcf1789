@@ -1,0 +1,71 @@
+package server;
+
+import environment.LocalBoard;
+import remote.ActionResult;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class Server {
+    private LocalBoard board;
+    private ServerSocket serverSocket;
+
+    public Server(int port) throws IOException {
+        board = new LocalBoard();
+        serverSocket = new ServerSocket(port);
+    }
+
+    public void start() throws IOException, ClassNotFoundException {
+        System.out.println("Server started. Waiting for clients...");
+        while (true) {
+            Socket clientSocket = serverSocket.accept();
+            new Thread(() -> {
+                try {
+                    handleClient(clientSocket);
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+    }
+
+    private void handleClient(Socket clientSocket) throws IOException, ClassNotFoundException {
+        ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+        ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+        try {
+            while (!clientSocket.isClosed()) {
+                environment.BoardPosition position = (environment.BoardPosition) in.readObject();
+                ActionResult result = processCoordinates(position.x, position.y);
+                out.writeObject(result);
+                if (result.gameEnded()) {
+                    clientSocket.close();
+                }
+            }
+        } finally {
+            in.close();
+            out.close();
+            clientSocket.close();
+        }
+    }
+
+    private ActionResult processCoordinates(int x, int y) {
+        // Aquí implementarías la lógica para verificar y modificar el tablero
+        // Por ahora solo un ejemplo
+        boolean successful = false;
+        boolean gameEnded = false;
+
+        // Lógica para modificar el tablero y verificar el estado del juego
+        // ...
+
+        return new ActionResult(successful, gameEnded);
+    }
+
+    public static void main(String[] args) {
+        try {
+            Server server = new Server(8080);
+            server.start();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}

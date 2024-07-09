@@ -1,0 +1,152 @@
+package environment;
+
+
+import game.GameElement;
+import game.Goal;
+import game.Killer;
+import game.Obstacle;
+import game.Snake;
+
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import game.AutomaticSnake;
+
+public class Cell{
+	private BoardPosition position;
+	private Snake ocuppyingSnake = null;
+	private GameElement gameElement=null;
+	
+	public Lock lock = new ReentrantLock();
+	public Condition ss = lock.newCondition();
+
+	public GameElement getGameElement() {
+		return gameElement;
+	}
+
+
+	public Cell(BoardPosition position) {
+		super();
+		this.position = position;
+	}
+
+	public BoardPosition getPosition() {
+		return position;
+	}
+
+	// request a cell to be occupied by Snake, If it is occupied by another Snake or Obstacle, wait.
+	public  void request(Snake snake)
+			throws InterruptedException {
+		lock.lock();
+		  try {
+			  
+			  ocuppyingSnake = snake;
+			  
+		  }finally {
+			  lock.unlock();
+		  }
+	}
+
+	public void release(Snake snake) throws InterruptedException {
+		lock.lock();
+		  try {
+			  
+			  ocuppyingSnake = null;
+		        ss.signalAll();
+			  
+		  }finally {
+			  lock.unlock();
+		  }
+	}
+	
+	// passar await no request 
+	// mudancas na cobra
+	
+	public  void move(Snake snake, Cell nextCell) throws InterruptedException {
+    	lock.lock();
+        try {
+	        
+	        System.out.println("Moving snake from " + this.getPosition() + " to " + nextCell.getPosition());
+	        
+	        if (isOcupied()) {
+	        	System.out.println("Movement not allowed to position " + nextCell.getPosition());
+	            ss.await(); 
+	        } else {
+	            	snake.snakeisgoal(position);
+	            	snake.increaseSize(position);
+	            	ocuppyingSnake = snake;
+					snake.getCells().add(this);
+	        }
+        } finally {
+            lock.unlock();
+        } 
+    }
+	
+
+	public boolean isOcupiedBySnake() {
+		return ocuppyingSnake!=null;
+	}
+
+	@Override
+	public String toString() {
+		return "" + position;
+	}
+
+	public void setGameElement(GameElement obstacle) {
+		gameElement=obstacle;
+
+	}
+
+	public boolean isOcupied() {
+		return isOcupiedBySnake() || (gameElement!=null && gameElement instanceof Obstacle);
+	}
+
+
+	public Snake getOcuppyingSnake() {
+		return ocuppyingSnake;
+	}
+
+
+	public Goal removeGoal() {
+		gameElement=null;
+		return null;
+	}
+	public void removeObstacle() {
+		 this.gameElement = null;
+		    setChanged();
+		    notifyObservers();
+	}
+
+
+	public Goal getGoal() {
+		return (Goal)gameElement;
+	}
+
+
+	public boolean isOcupiedByGoal() {
+		return (gameElement!=null && gameElement instanceof Goal);
+	}
+
+
+	public boolean isOccupiedByKiller() {
+		return (gameElement!=null && gameElement instanceof Killer);
+	}
+
+
+	public boolean isOcupiedByObstacle() {
+		return (gameElement!=null && gameElement instanceof Obstacle);
+	}
+	
+	public boolean isOccupied() {
+        return gameElement != null;
+    }
+
+
+	public void removeSnake(Snake snake) {
+		this.gameElement = null;
+	}
+
+
+
+}

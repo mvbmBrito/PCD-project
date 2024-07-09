@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+    <fullyQualifiedTypeName name="environment.BoardPosition"/>
+    <fullyQualifiedTypeName name="environment.Cell"/>
+    <fullyQualifiedTypeName name="environment.Board"/>
+    <fullyQualifiedTypeName name="java.util.concurrent.BrokenBarrierException"/>
+    <fullyQualifiedTypeName name="java.util.Observable"/>
+    <fullyQualifiedTypeName name="java.util.concurrent.CyclicBarrier"/>
+    <fullyQualifiedTypeName name="game.Killer"/>
+</qualifiedTypeNameHistroy>

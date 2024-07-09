@@ -1,0 +1,11 @@
+public class functions {
+    private String folha = "Folha";
+    private String casa = "Casa";
+
+    public void imprimirArray() {
+        String[] array1 = {casa, folha};
+        System.out.println(java.util.Arrays.toString(array1));
+    }
+
+   
+}

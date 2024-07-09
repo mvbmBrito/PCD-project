@@ -1,0 +1,95 @@
+package server;
+
+import environment.BoardPosition;
+import environment.Cell;
+import environment.LocalBoard;
+import remote.ActionResult;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class Server {
+    public static final int SERVER_PORT = 8085;
+    private LocalBoard board;
+    private ServerSocket serverSocket;
+
+    // Constructor que inicializa el ServerSocket
+    public Server(int port) throws IOException {
+        board = new LocalBoard();  // Asumiendo que esta clase no arroja errores.
+        serverSocket = new ServerSocket(port);  // Crear un ServerSocket en el puerto especificado.
+    }
+
+    // Método para comenzar a aceptar conexiones
+    public void start() throws IOException, ClassNotFoundException {
+        System.out.println("Server started on port " + SERVER_PORT + ". Waiting for clients...");
+        while (true) {
+            Socket clientSocket = serverSocket.accept(); 
+            System.out.println("Client connected: " + clientSocket.getInetAddress());
+            new Thread(() -> {
+                try {
+                    handleClient(clientSocket);
+                } catch (IOException | ClassNotFoundException e) {
+                    System.out.println("Error handling client: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+    }
+    // Manejar las interacciones con un cliente
+    private void handleClient(Socket clientSocket) throws IOException, ClassNotFoundException {
+        ObjectOutputStream out = new ObjectOutputStream(clientSocket.getOutputStream());
+        ObjectInputStream in = new ObjectInputStream(clientSocket.getInputStream());
+        try {
+            while (!clientSocket.isClosed()) {
+                environment.BoardPosition position = (environment.BoardPosition) in.readObject();
+                ActionResult result = processCoordinates(position.x, position.y);
+                out.writeObject(result);
+                if (result.gameEnded()) {
+                    clientSocket.close();
+                }
+            }
+        } finally {
+            in.close();
+            out.close();
+            clientSocket.close();
+        }
+    }
+
+    // Simulación de procesamiento de coordenadas
+    private ActionResult processCoordinates(int x, int y) {
+        System.out.println("Received coordinates (" + x + ", " + y + ")");
+        Cell cell = board.getCell(new BoardPosition(x, y));
+        boolean successful = false;
+        boolean gameEnded = false;
+
+        if (cell.isOcupiedByObstacle()) {
+            System.out.println("Cell occupied by an obstacle. Removing obstacle...");
+            cell.removeObstacle();
+            successful = true;
+        }
+        if (cell.getOcuppyingSnake() != null && !cell.getOcuppyingSnake().isAlive()) {
+            System.out.println("Occupying snake is dead. Removing snake...");
+            cell.removeSnake(cell.getOcuppyingSnake());
+            successful = true;
+        }
+
+        gameEnded = board.checkGameEndConditions();
+        if (gameEnded) {
+            System.out.println("Game end conditions met. Ending game...");
+            board.endGame();
+        } else {
+            System.out.println("Game continues.");
+        }
+
+        return new ActionResult(successful, gameEnded);
+    }
+    // Método main para correr el servidor
+    public static void main(String[] args) {
+        try {
+            Server server = new Server(SERVER_PORT);
+            server.start();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}

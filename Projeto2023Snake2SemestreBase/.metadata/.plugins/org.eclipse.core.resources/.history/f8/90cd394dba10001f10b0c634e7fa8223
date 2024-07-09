@@ -1,0 +1,213 @@
+package environment;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Observable;
+import java.util.Random;
+
+import game.GameElement;
+import game.Goal;
+import game.Killer;
+import game.Obstacle;
+import game.ObstacleMover;
+import game.Snake;
+
+// Class is abstract to allow the creation of other kinds of Board, which is not necessary in this project.
+public abstract class Board extends Observable {
+	protected Cell[][] cells;
+	private BoardPosition goalPosition;
+	public static final long PLAYER_PLAY_INTERVAL = 100;
+	public static final long REMOTE_REFRESH_INTERVAL = 200;
+	public static final int WIDTH = 30;
+	public static final int HEIGHT = 30;
+	protected LinkedList<Snake> snakes = new LinkedList<Snake>();
+	protected LinkedList<Obstacle> obstacles= new LinkedList<Obstacle>();
+	private LinkedList<Killer> killers = new LinkedList<>();
+	public boolean isFinished;
+
+	public Board() {
+		cells = new Cell[WIDTH][HEIGHT];
+		for (int x = 0; x < WIDTH; x++) {
+			for (int y = 0; y < HEIGHT; y++) {
+				cells[x][y] = new Cell(new BoardPosition(x, y));
+			}
+		}
+
+	}
+
+	public Cell getCell(BoardPosition cellCoord) {
+		return cells[cellCoord.x][cellCoord.y];
+	}
+
+	public BoardPosition getRandomPosition() {
+		return new BoardPosition((int) (Math.random() *HEIGHT),(int) (Math.random() * HEIGHT));
+	}
+
+	public BoardPosition getGoalPosition() {
+		return goalPosition;
+	}
+
+	public void setGoalPosition(BoardPosition goalPosition) {
+		this.goalPosition = goalPosition;
+	}
+
+	public void addGameElement(GameElement gameElement) {
+		boolean placed=false;
+		while(!placed) {
+			BoardPosition pos=getRandomPosition();
+			if(!getCell(pos).isOcupied() && !getCell(pos).isOcupiedByGoal()) {
+				getCell(pos).setGameElement(gameElement);
+				if(gameElement instanceof Goal) {
+					setGoalPosition(pos);
+//					System.out.println("Goal placed at:"+pos);
+				}
+				placed=true;
+			}
+		}
+	}
+
+	public List<BoardPosition> getNeighboringPositions(Cell cell) {
+		ArrayList<BoardPosition> possibleCells=new ArrayList<BoardPosition>();
+		BoardPosition pos=cell.getPosition();
+		if(pos.x>0)
+			possibleCells.add(pos.getCellLeft());
+		if(pos.x<WIDTH-1)
+			possibleCells.add(pos.getCellRight());
+		if(pos.y>0)
+			possibleCells.add(pos.getCellAbove());
+		if(pos.y<HEIGHT-1)
+			possibleCells.add(pos.getCellBelow());
+		return possibleCells;
+
+	}
+
+	public BoardPosition selectPositionClosestToGoal(BoardPosition currentPosition) {
+		List<BoardPosition> neighboringPositions = getNeighboringPositions(getCell(currentPosition));
+	    List<BoardPosition> possibleDestinations = new ArrayList<>();
+
+	    for (BoardPosition position : neighboringPositions) {
+	        Cell cell = getCell(position);
+	        if (!cell.isOcupied()) {
+	        	possibleDestinations.add(position);
+	        }
+	    }
+
+	    if (!possibleDestinations.isEmpty()) {
+	        int randomIndex = new Random().nextInt(possibleDestinations.size());
+	        return possibleDestinations.get(randomIndex);
+	    } else {
+	        return currentPosition;
+	    }
+	}
+
+	protected Goal addGoal() {
+		Goal goal=new Goal(this);
+		addGameElement( goal);
+		return goal;
+	}
+
+	protected void addObstacles(int numberObstacles) {
+		getObstacles().clear();
+		while(numberObstacles>0) {
+			Obstacle obs=new Obstacle(this);
+			addGameElement( obs);
+			getObstacles().add(obs);
+			numberObstacles--;
+		}
+	}
+
+	public LinkedList<Snake> getSnakes() {
+		return snakes;
+	}
+
+
+	@Override
+	public void setChanged() {
+		super.setChanged();
+		notifyObservers();
+	}
+
+	public void moveObstacle(Obstacle obstacle) {
+		//TODO
+		
+	}
+
+	
+	public void removeGoal() {
+		//TODO
+		
+	}
+	
+	public void endGame() {
+        
+        isFinished = true;
+        
+        for (Snake snake : snakes) {
+            snake.interrupt();
+
+        }
+        setChanged();
+        notifyObservers();
+    }
+	
+	public boolean isFinished() {
+		return isFinished;
+
+	}
+
+	public LinkedList<Obstacle> getObstacles() {
+		//TODO
+		// percorrer cells e acumular obstáculos numa lista
+		return obstacles;
+	}
+
+
+	public void addSnake(Snake snake) {
+		snakes.add(snake);
+	}
+
+	public void addKiller(Killer killer) {
+        killers.add(killer);
+    }
+	
+	public abstract void init(); 
+
+	public abstract void handleKeyPress(int keyCode);
+
+	public abstract void handleKeyRelease();
+
+
+
+	protected void setCells(Cell[][] cells) {
+		this.cells=cells;
+	}
+
+	public Cell[][] getCells() {
+		return cells;
+	}
+	  public BoardPosition getRandomFreePosition() {
+	        Random rand = new Random();
+	        BoardPosition position;
+	        do {
+	            int x = rand.nextInt(WIDTH);
+	            int y = rand.nextInt(HEIGHT);
+	            position = new BoardPosition(x, y);
+	        } while (getCell(position).isOccupied()); // Continue se a célula está ocupada
+	        return position;
+	    }
+
+	    // Método para posicionar um Killer no tabuleiro
+	 
+	    public boolean checkGameEndConditions() {
+		    // Ejemplo: El juego termina si todas las serpientes están muertas.
+		    for (Snake snake : snakes) {
+		        if (snake.isAlive()) {
+		            return false; // Si alguna serpiente sigue viva, el juego continúa.
+		        }
+		    }
+		    return true; // Todas las serpientes están muertas, el juego termina.
+		}
+
+}
